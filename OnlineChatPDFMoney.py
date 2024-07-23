@@ -98,15 +98,17 @@ if uploaded_file is not None:
                 Stream_handler = StreamHandler(chat_box)
                 model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[Stream_handler])
 
-                chain = (
-                    {"context": retriever, "question": RunnablePassthrough()}
-                    | prompt
-                    | model
-                    | StrOutputParser()
-                )
+                #chain = (
+                #    {"context": retriever, "question": RunnablePassthrough()}
+                #    | prompt
+                #    | model
+                #    | StrOutputParser()
+                #)
                 
-                result = chain.invoke(question)
-                model.stream_response(result)
+                # Context를 직접 가져와 스트리밍 응답 처리
+                context = retriever.retrieve(question)
+                prompt_text = prompt.format(context=context, question=question)
+                model.stream_response(prompt_text)
 
     except Exception as e:
         st.error(f"파일 처리 중 오류가 발생했습니다: {e}")
