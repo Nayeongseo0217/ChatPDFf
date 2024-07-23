@@ -51,13 +51,19 @@ def pdf_to_document(uploaded_file):
     return pages
 
 #Stream 받아 줄 Hander 만들기
-class Streamhandler(BaseCallbackHandler):
+'''class Streamhandler(BaseCallbackHandler):
     def __init__(self, container, initial_text = ""):
         self.container = container
         self.text = initial_text
     def on_llm_new_token(self, token: str, **kwargs) -> None:
         self.text += token
-        self.container.markdown(self.text)
+        self.container.markdown(self.text)'''
+class StreamHandler:
+    def __init__(self, chat_box):
+        self.chat_box = chat_box
+    
+    def __call__(self, data):
+        self.chat_box.text(data)
 
 # 업로드된 파일이 있을 때
 if uploaded_file is not None:
@@ -89,7 +95,7 @@ if uploaded_file is not None:
         if st.button('질문하기'):
             with st.spinner('답변하는 중...'):
                 chat_box = st.empty()
-                Stream_handler = Streamhandler(chat_box)
+                Stream_handler = StreamHandler(chat_box)
                 model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[Stream_handler])
 
                 chain = (
@@ -100,7 +106,7 @@ if uploaded_file is not None:
                 )
                 
                 result = chain.invoke(question)
-                st.write(result)
+                model.stream_response(result)
 
     except Exception as e:
         st.error(f"파일 처리 중 오류가 발생했습니다: {e}")
