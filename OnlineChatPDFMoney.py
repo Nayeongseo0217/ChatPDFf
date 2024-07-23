@@ -99,7 +99,7 @@ if uploaded_file is not None:
                     | StrOutputParser()
                 )
                 
-                result = chain.invoke({"context": retriever, "question": question})
+                result = chain.invoke(question)
                 st.write(result)
 
     except Exception as e:
