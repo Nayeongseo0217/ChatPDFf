@@ -100,6 +100,7 @@ if uploaded_file is not None:
                 )
                 
                 result = chain.invoke({"context": retriever, "question": question})
+                st.write(result)
 
     except Exception as e:
         st.error(f"파일 처리 중 오류가 발생했습니다: {e}")
