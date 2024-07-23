@@ -83,14 +83,6 @@ if uploaded_file is not None:
         Question: {question}
         """
         prompt = ChatPromptTemplate.from_template(template)
-        model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[Streamhandler(st.empty())])
-
-        chain = (
-            {"context": retriever, "question": RunnablePassthrough()}
-            | prompt
-            | model
-            | StrOutputParser()
-        )
 
         st.header('ChatPDF에게 질문해보세요!!')
         question = st.text_input('질문을 입력하세요')
@@ -98,7 +90,16 @@ if uploaded_file is not None:
             with st.spinner('답변하는 중...'):
                 chat_box = st.empty()
                 Stream_handler = Streamhandler(chat_box)
-                chain.invoke(question)
+                model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[Stream_handler])
+
+                chain = (
+                    {"context": retriever, "question": RunnablePassthrough()}
+                    | prompt
+                    | model
+                    | StrOutputParser()
+                )
                 
+                chain.invoke(question)
+
     except Exception as e:
         st.error(f"파일 처리 중 오류가 발생했습니다: {e}")
