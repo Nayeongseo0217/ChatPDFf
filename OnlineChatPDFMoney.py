@@ -5,6 +5,8 @@
 import os
 import tempfile
 import logging
+from uuid import UUID
+from langchain_core.outputs import ChatGenerationChunk, GenerationChunk
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
@@ -16,6 +18,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 import google.generativeai as genai
+from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
+from langchain.callbacks.base import BaseCallbackHandler
 
 # 환경 변수 로드
 load_dotenv()
@@ -46,6 +50,15 @@ def pdf_to_document(uploaded_file):
     pages = loader.load_and_split()
     return pages
 
+#Stream 받아 줄 Hander 만들기
+class Streamhandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text = ""):
+        self.container = container
+        self.text = initial_text
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        self.text += token
+        self.container.markdown(self.text)
+
 # 업로드된 파일이 있을 때
 if uploaded_file is not None:
     try:
@@ -70,7 +83,7 @@ if uploaded_file is not None:
         Question: {question}
         """
         prompt = ChatPromptTemplate.from_template(template)
-        model = ChatGoogleGenerativeAI(model="gemini-pro")
+        model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[Streamhandler(st.empty())])
 
         chain = (
             {"context": retriever, "question": RunnablePassthrough()}
@@ -83,7 +96,9 @@ if uploaded_file is not None:
         question = st.text_input('질문을 입력하세요')
         if st.button('질문하기'):
             with st.spinner('답변하는 중...'):
-                answer = chain.invoke(question)
-                st.write(answer)
+                chat_box = st.empty()
+                Stream_handler = Streamhandler(chat_box)
+                chain.invoke(question)
+                
     except Exception as e:
         st.error(f"파일 처리 중 오류가 발생했습니다: {e}")
