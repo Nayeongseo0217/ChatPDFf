@@ -5,8 +5,6 @@
 import os
 import tempfile
 import logging
-from uuid import UUID
-from langchain_core.outputs import ChatGenerationChunk, GenerationChunk
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
@@ -18,8 +16,10 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 import google.generativeai as genai
+#from langchain_anthropic import ChatAnthropic
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.callbacks.base import BaseCallbackHandler
+
 
 # 환경 변수 로드
 load_dotenv()
@@ -51,19 +51,20 @@ def pdf_to_document(uploaded_file):
     return pages
 
 #Stream 받아 줄 Hander 만들기
-#class Streamhandler(BaseCallbackHandler):
-#    def __init__(self, container, initial_text = ""):
-#        self.container = container
-#        self.text = initial_text
-#    def on_llm_new_token(self, token: str, **kwargs) -> None:
-#        self.text += token
-#        self.container.markdown(self.text)
-class StreamHandler(BaseCallbackHandler):
-    def __init__(self, chat_box):
-        self.chat_box = chat_box
-    
-    def __call__(self, data):
-        self.chat_box.text(data)
+class Streamhandler(BaseCallbackHandler):
+    def __init__(self, container, initial_text = ""):
+        self.container = container
+        self.text = initial_text
+    def on_llm_new_token(self, token: str, **kwargs) -> None:
+        self.text += token
+        self.container.markdown(self.text)
+
+#class StreamHandler(BaseCallbackHandler):
+#    def __init__(self, chat_box):
+#        self.chat_box = chat_box
+#    
+#    def __call__(self, data):
+#        self.chat_box.text(data)
 
 # 업로드된 파일이 있을 때
 if uploaded_file is not None:
@@ -90,25 +91,27 @@ if uploaded_file is not None:
         """
         prompt = ChatPromptTemplate.from_template(template)
 
+        # AI 답변 생성 모델 설정
+
+        # 전체 체인을 묶어서 완성: 입력 질문을 받아서 답변 생성까지의 과정 정의
+
         st.header('ChatPDF에게 질문해보세요!!')
         question = st.text_input('질문을 입력하세요')
         if st.button('질문하기'):
             with st.spinner('답변하는 중...'):
                 chat_box = st.empty()
-                Stream_handler = StreamHandler(chat_box)
-                model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[Stream_handler])
+                stream_hander = Streamhandler(chat_box)
+                model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[stream_hander])
 
-                #chain = (
-                #    {"context": retriever, "question": RunnablePassthrough()}
-                #    | prompt
-                #    | model
-                #    | StrOutputParser()
-                #)
-                
-                # Context를 직접 가져와 스트리밍 응답 처리
-                context = retriever.retrieve(question)
-                prompt_text = prompt.format(context=context, question=question)
-                model.stream_response(prompt_text)
+                chain = (
+                    {"context": retriever, "question": RunnablePassthrough()}
+                    | prompt
+                    | model
+                    | StrOutputParser()
+                )
+                # 체인을 실행하여 질문에 대한 답변 생성
+                chain.invoke(question)
+
 
     except Exception as e:
         st.error(f"파일 처리 중 오류가 발생했습니다: {e}")
