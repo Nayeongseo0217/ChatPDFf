@@ -107,10 +107,10 @@ if uploaded_file is not None:
                     {"context": retriever, "question": RunnablePassthrough()}
                     | prompt
                     | model
-                    | StrOutputParser()
+                    | StrOutputParser() # 결과를 문자열로 변환하거나 처리하는 역할
                 )
                 # 체인을 실행하여 질문에 대한 답변 생성
-                chain.invoke(question)
+                chain.invoke({"question" : question, "context" : retriever})
 
 
     except Exception as e:
