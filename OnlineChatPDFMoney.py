@@ -104,7 +104,7 @@ if uploaded_file is not None:
                 model = ChatGoogleGenerativeAI(model="gemini-pro", streaming = True, callbacks=[stream_hander])
 
                 chain = (
-                    {"context": retriever, "question": RunnablePassthrough()}
+                    {"context": retriever, "question": question}
                     | prompt
                     | model
                     | StrOutputParser() # 결과를 문자열로 변환하거나 처리하는 역할
